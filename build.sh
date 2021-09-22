@@ -1,0 +1,1 @@
+env GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CGO_LDFLAGS=-static CC=x86_64-linux-musl-gcc go build
