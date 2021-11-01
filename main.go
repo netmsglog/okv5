@@ -131,7 +131,7 @@ func ToFloat(s string) float64 {
 func ToInt(s string) int {
 	f, err := strconv.Atoi(s)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
 		return 0
 	}
 	return f
@@ -139,13 +139,20 @@ func ToInt(s string) int {
 
 // ToTime : 将字符串转换为time.Time
 func ToTime(s string) time.Time {
-	layout := "2006-01-02T15:04:05.000Z"
-	t, err := time.Parse(layout, s)
+	/*
+		layout := "2006-01-02T15:04:05.000Z"
+		t, err := time.Parse(layout, s)
+		if err != nil {
+			fmt.Println(err)
+			return time.Time{}
+		}
+		return t
+	*/
+	t, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		fmt.Println(err)
 		return time.Time{}
 	}
-	return t
+	return time.Unix(0, t*int64(time.Millisecond))
 }
 
 func file2strs(fileName string) []string {
@@ -220,7 +227,7 @@ func init() {
 	// config.IsPrint = true
 	globalCID = cfgFile[3]
 	config.TimeoutSecond = 45
-	config.IsPrint = true
+	config.IsPrint = false
 	config.I18n = okex.ENGLISH
 	okexCli = okex.NewClient(config)
 
@@ -236,53 +243,8 @@ func init() {
 	minBalance = 1000.0
 	priceConfig = make(map[string]string)
 	sizeConfig = make(map[string]string)
-	priceConfig["etc-usdt"] = "%.3f"
-	sizeConfig["etc-usdt"] = "%.3f"
-	priceConfig["ltc-usdt"] = "%.2f"
-	sizeConfig["ltc-usdt"] = "%.3f"
-	priceConfig["bch-usdt"] = "%.2f"
-	sizeConfig["bch-usdt"] = "%.3f"
-	priceConfig["eth-usdt"] = "%.2f"
-	sizeConfig["eth-usdt"] = "%.3f"
-	priceConfig["xrp-usdt"] = "%.4f"
-	sizeConfig["xrp-usdt"] = "%.3f"
-	priceConfig["okb-usdt"] = "%.4f"
-	sizeConfig["okb-usdt"] = "%.3f"
-	priceConfig["btc-usdt"] = "%.1f"
-	sizeConfig["btc-usdt"] = "%.3f"
-	priceConfig["eos-usdt"] = "%.3f"
-	sizeConfig["eos-usdt"] = "%.3f"
-	priceConfig["pax-usdt"] = "%.4f"
-	sizeConfig["pax-usdt"] = "%.3f"
-	priceConfig["tusd-usdt"] = "%.4f"
-	sizeConfig["tusd-usdt"] = "%.3f"
-	priceConfig["trx-usdt"] = "%.5f"
-	sizeConfig["trx-usdt"] = "%.3f"
-	priceConfig["eth-btc"] = "%.5f"
-	sizeConfig["eth-btc"] = "%.3f"
-	priceConfig["ltc-btc"] = "%.6f"
-	sizeConfig["ltc-btc"] = "%.3f"
-	priceConfig["eos-btc"] = "%.7f"
-	sizeConfig["eos-btc"] = "%.3f"
-	priceConfig["bch-btc"] = "%.5f"
-	sizeConfig["bch-btc"] = "%.3f"
-	priceConfig["eos-eth"] = "%.8f"
-	sizeConfig["eos-eth"] = "%.2f"
-	priceConfig["uni-usdt"] = "%.3f"
-	sizeConfig["uni-usdt"] = "%.3f"
-	priceConfig["dot-usdt"] = "%.3f"
-	sizeConfig["dot-usdt"] = "%.3f"
-	priceConfig["fil-usdt"] = "%.2f"
-	sizeConfig["fil-usdt"] = "%.3f"
-	priceConfig["aave-usdt"] = "%.2f"
-	sizeConfig["aave-usdt"] = "%.3f"
-	priceConfig["sushi-usdt"] = "%.3f"
-	sizeConfig["sushi-usdt"] = "%.3f"
-	priceConfig["ksm-usdt"] = "%.2f"
-	sizeConfig["ksm-usdt"] = "%.3f"
-	priceConfig["doge-usdt"] = "%.6f"
-	sizeConfig["doge-usdt"] = "%.2f"
-
+	priceConfig["ETH-USDT"] = "%.2f"
+	sizeConfig["ETH-USDT"] = "%.3f"
 	db, err = gorm.Open("sqlite3", "trade.db")
 	if err != nil {
 		fmt.Println(err)
@@ -365,6 +327,7 @@ func postOrder(symbol string, direction string, price string, size string) strin
 		fmt.Printf("okex下单失败:%s (%s %s %s):订单号(%s) (code:%s) (msg:%s)\n", symbol, direction, opts["price"], opts["size"], oid, sCode, sMsg)
 		jstr, _ := okex.Struct2JsonString(r)
 		fmt.Println(jstr)
+		return "-1"
 	} else {
 		fmt.Printf("okex下单成功:%s (%s %s %s):订单号(%s)\n", symbol, direction, opts["price"], opts["size"], oid)
 	}
@@ -839,11 +802,11 @@ func runDynamicGrid(symbol string, buydepth int, step string, size string) {
 func printOrder(rec map[string]interface{}) {
 	orderID := rec["ordId"].(string) // 订单ID
 	// orderRealAmount := ToFloat(rec["filled_notional"].(string)) // 已成交金额
-	orderRealSize := rec["fillSz"].(string)
-	orderRealSizef := ToFloat(orderRealSize)     // 已成交数量
-	orderPrice := ToFloat(rec["px"].(string))    // 挂单价格
-	orderSize := ToFloat(rec["sz"].(string))     // 挂单数量
-	realPrice := ToFloat(rec["fillPx"].(string)) // orderRealAmount / orderRealSizef // 实际成交价格
+	orderRealSize := rec["accFillSz"].(string)
+	orderRealSizef := ToFloat(orderRealSize)    // 已成交数量
+	orderPrice := ToFloat(rec["px"].(string))   // 挂单价格
+	orderSize := ToFloat(rec["sz"].(string))    // 挂单数量
+	realPrice := ToFloat(rec["avgPx"].(string)) // orderRealAmount / orderRealSizef // 实际成交价格
 	orderRealAmount := orderRealSizef * realPrice
 	orderTime := rec["cTime"].(string) // 订单创建时间
 	orderSide := rec["side"].(string)  // 订单方向(buy/sell)
@@ -860,11 +823,11 @@ func printOrder(rec map[string]interface{}) {
 func processFilledOrder(rec map[string]interface{}, symbol string, stepf float64, size string) {
 	orderID := rec["ordId"].(string) // 订单ID
 	// orderRealAmount := ToFloat(rec["filled_notional"].(string)) // 已成交金额
-	orderRealSize := rec["fillSz"].(string)
-	orderRealSizef := ToFloat(orderRealSize)     // 已成交数量
-	orderPrice := ToFloat(rec["px"].(string))    // 挂单价格
-	orderSize := ToFloat(rec["sz"].(string))     // 挂单数量
-	realPrice := ToFloat(rec["fillPx"].(string)) // orderRealAmount / orderRealSizef // 实际成交价格
+	orderRealSize := rec["accFillSz"].(string)
+	orderRealSizef := ToFloat(orderRealSize)    // 已成交数量
+	orderPrice := ToFloat(rec["px"].(string))   // 挂单价格
+	orderSize := ToFloat(rec["sz"].(string))    // 挂单数量
+	realPrice := ToFloat(rec["avgPx"].(string)) // orderRealAmount / orderRealSizef // 实际成交价格
 	orderRealAmount := orderRealSizef * realPrice
 	orderTime := ToTime(rec["cTime"].(string)) // 订单创建时间
 	orderSide := rec["side"].(string)          // 订单方向(buy/sell)
@@ -1094,12 +1057,15 @@ func main() {
 		}
 		symbol := os.Args[2]
 		oid := os.Args[3]
-		r, err := okexCli.PostSpotCancelOrders(symbol, oid)
-		if err != nil {
-			fmt.Println("取消订单信息失败:", err)
-			return
-		}
-		fmt.Println((*r)["ordId"], (*r)["sCode"])
+		/*
+			r, err := okexCli.PostSpotCancelOrders(symbol, oid)
+			if err != nil {
+				fmt.Println("取消订单信息失败:", err)
+				return
+			}
+			fmt.Println((*r)["ordId"], (*r)["sCode"])
+		*/
+		fmt.Println(cancelOrder(symbol, oid))
 		// printOrder(*r)
 		return
 	case os.Args[1] == "list": // 显示所有已完成订单
@@ -1107,12 +1073,12 @@ func main() {
 			help()
 		}
 		symbol := os.Args[2]
-		paras := okex.NewParams()
+		// paras := okex.NewParams()
 		stat := "filled"
 		if len(os.Args) >= 4 {
 			stat = os.Args[3]
 		}
-		f, err := okexCli.GetSpotOrders(stat, symbol, &paras) // 最大100个单啊，注意是否有坑 "cancelled"
+		f, err := okexCli.GetSpotOrders(stat, symbol, nil) // 最大100个单啊，注意是否有坑 "cancelled"
 		if err != nil {
 			fmt.Printf("获取%s已完成订单信息错误:%s\n", symbol, err.Error())
 			return

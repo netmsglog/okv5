@@ -1,5 +1,7 @@
 package okex
 
+import "errors"
+
 /*
 币币账户信息
 获取币币账户资产列表(仅展示拥有资金的币对)，查询各币种的余额、冻结和可用等信息。
@@ -148,6 +150,11 @@ func (client *Client) GetSpotOrdersById(instrumentId, orderOrClientId string) (*
 	if _, err := client.Request(GET, uri, nil, &r); err != nil {
 		return nil, err
 	}
+	code := r["code"].(string)
+	msg := r["msg"].(string)
+	if code != "0" {
+		return nil, errors.New(msg)
+	}
 	data := r["data"].([]interface{})
 	rr := data[0].(map[string]interface{})
 	return &rr, nil
@@ -258,7 +265,15 @@ func (client *Client) GetSpotInstrumentTicker(instrument_id string) (*map[string
 	if _, err := client.Request(GET, url, nil, &r); err != nil {
 		return nil, err
 	}
-	return &r, nil
+	code := r["code"].(string)
+	msg := r["msg"].(string)
+	if code != "0" {
+		return nil, errors.New(msg)
+	}
+	data := r["data"].([]interface{})
+	rr := data[0].(map[string]interface{})
+	return &rr, nil
+	// return &r, nil
 }
 
 /*
@@ -353,8 +368,10 @@ func (client *Client) PostSpotOrders(side, instrument_id string, optionalOrderIn
 	if _, err := client.Request(POST, SPOT_ORDERS, postParams, &r); err != nil {
 		return nil, err
 	}
-
-	return &r, nil
+	data := r["data"].([]interface{})
+	rr := data[0].(map[string]interface{})
+	return &rr, nil
+	// return &r, nil
 }
 
 /*
