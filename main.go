@@ -20,8 +20,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	// remove database support
+	//	"github.com/jinzhu/gorm"
+	//	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/matryer/runner"
 	"github.com/netmsglog/okv5/okex"
 	"github.com/rapidloop/skv"
@@ -49,8 +50,8 @@ type Grid struct {
 }
 
 var (
-	okexCli          *okex.Client
-	db               *gorm.DB          // 网格成交订单数据库
+	okexCli *okex.Client
+	// db               *gorm.DB          // 网格成交订单数据库
 	cache            *skv.KVStore      // 网格跟踪K/V数据: ltc-usdt-1 => Grid
 	reverse          *skv.KVStore      // 订单反向索引K/V数据: 2013413423424324 => ltc-usdt-1
 	priceConfig      map[string]string // 货币的price的小数点精度
@@ -237,7 +238,7 @@ func init() {
 
 	maxPrice = 10000.0
 	minPrice = 0.0
-	currentSymbol = "btc-usdt"
+	currentSymbol = "ETH-USDT"
 	motherCurrency = "USDT"
 	availableBalance = 100000.0
 	minBalance = 1000.0
@@ -245,13 +246,14 @@ func init() {
 	sizeConfig = make(map[string]string)
 	priceConfig["ETH-USDT"] = "%.2f"
 	sizeConfig["ETH-USDT"] = "%.3f"
-	db, err = gorm.Open("sqlite3", "trade.db")
-	if err != nil {
-		fmt.Println(err)
-		panic("无法打开交易数据库trade.db")
-	}
-	db.AutoMigrate(&Trade{})
-
+	/*
+		db, err = gorm.Open("sqlite3", "trade.db")
+		if err != nil {
+			fmt.Println(err)
+			panic("无法打开交易数据库trade.db")
+		}
+		db.AutoMigrate(&Trade{})
+	*/
 	cache, err = skv.Open("grid.db")
 	if err != nil {
 		fmt.Println(err)
@@ -266,7 +268,7 @@ func init() {
 
 // 程序中断时(e.g. kill或Ctrl-C)关闭数据库
 func shutdown() {
-	db.Close()
+	// db.Close()
 	cache.Close()
 }
 
@@ -824,13 +826,13 @@ func processFilledOrder(rec map[string]interface{}, symbol string, stepf float64
 	orderID := rec["ordId"].(string) // 订单ID
 	// orderRealAmount := ToFloat(rec["filled_notional"].(string)) // 已成交金额
 	orderRealSize := rec["accFillSz"].(string)
-	orderRealSizef := ToFloat(orderRealSize)    // 已成交数量
-	orderPrice := ToFloat(rec["px"].(string))   // 挂单价格
-	orderSize := ToFloat(rec["sz"].(string))    // 挂单数量
-	realPrice := ToFloat(rec["avgPx"].(string)) // orderRealAmount / orderRealSizef // 实际成交价格
-	orderRealAmount := orderRealSizef * realPrice
-	orderTime := ToTime(rec["cTime"].(string)) // 订单创建时间
-	orderSide := rec["side"].(string)          // 订单方向(buy/sell)
+	// orderRealSizef := ToFloat(orderRealSize)    // 已成交数量
+	// orderPrice := ToFloat(rec["px"].(string))   // 挂单价格
+	// orderSize := ToFloat(rec["sz"].(string))    // 挂单数量
+	// realPrice := ToFloat(rec["avgPx"].(string)) // orderRealAmount / orderRealSizef // 实际成交价格
+	// orderRealAmount := orderRealSizef * realPrice
+	// orderTime := ToTime(rec["cTime"].(string)) // 订单创建时间
+	orderSide := rec["side"].(string) // 订单方向(buy/sell)
 
 	ridx := updateGrid(orderID) // 找到并更新网格状态
 	if ridx == -1 {             // 已经处理过了
@@ -846,20 +848,22 @@ func processFilledOrder(rec map[string]interface{}, symbol string, stepf float64
 		setGrid(symbol, "buy", ridx-1, price, size, true)
 		incrValue(symbol + "-totalsell")
 	}
-	// 存入trade数据库作为记录
-	r := Trade{
-		ID:         orderID,
-		Symbol:     symbol,
-		TradeTime:  orderTime,
-		Side:       orderSide,
-		Price:      orderPrice,
-		Size:       orderSize,
-		RealAmount: orderRealAmount,
-		RealPrice:  realPrice,
-		RealSize:   orderRealSizef,
-		Grid:       ridx,
-	}
-	db.FirstOrCreate(&r, Trade{ID: orderID})
+	/*
+		// 存入trade数据库作为记录
+		r := Trade{
+			ID:         orderID,
+			Symbol:     symbol,
+			TradeTime:  orderTime,
+			Side:       orderSide,
+			Price:      orderPrice,
+			Size:       orderSize,
+			RealAmount: orderRealAmount,
+			RealPrice:  realPrice,
+			RealSize:   orderRealSizef,
+			Grid:       ridx,
+		}
+		db.FirstOrCreate(&r, Trade{ID: orderID})
+	*/
 }
 
 func showAccount() {
@@ -937,11 +941,13 @@ func main() {
 		grid.Status = -1
 		cache.Put(key, grid)
 		return
-	case os.Args[1] == "count":
-		var cnt int
-		db.Model(&Trade{}).Where("side = ?", "sell").Count(&cnt)
-		fmt.Printf("Sells:%d\n", cnt)
-		return
+	/*
+		case os.Args[1] == "count":
+			var cnt int
+			db.Model(&Trade{}).Where("side = ?", "sell").Count(&cnt)
+			fmt.Printf("Sells:%d\n", cnt)
+			return
+	*/
 	case os.Args[1] == "set":
 		if len(os.Args) != 4 {
 			help()
