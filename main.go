@@ -65,6 +65,7 @@ var (
 	availableBalance float64 // 可用余额
 	currentStatus    string  // 当前状态
 	globalCID        string  // 当前API账户标示
+	balStr           string  // 获取可用余额的json字符串，默认availEq，子账户为availBal
 )
 
 func encrypt(key []byte, message string) (encmess string, err error) {
@@ -216,7 +217,7 @@ func init() {
 
 	// 读取配置文件
 	cfgFile := file2strs(".config")
-	if len(cfgFile) < 4 { // 最后一行为CID标示
+	if len(cfgFile) < 6 { // 最后一行为CID标示
 		fmt.Println("错误的配置文件!")
 		os.Exit(1)
 	}
@@ -225,10 +226,14 @@ func init() {
 	config.ApiKey, _ = decrypt(cipher, cfgFile[0])
 	config.SecretKey, _ = decrypt(cipher, cfgFile[1])
 	config.Passphrase, _ = decrypt(cipher, cfgFile[2])
-	// config.IsPrint = true
+
 	globalCID = cfgFile[3]
 	config.TimeoutSecond = 45
 	config.IsPrint = false
+	if cfgFile[4] == "debug" {
+		config.IsPrint = true
+	}
+	balStr = cfgFile[5]
 	config.I18n = okex.ENGLISH
 	okexCli = okex.NewClient(config)
 
@@ -246,6 +251,8 @@ func init() {
 	sizeConfig = make(map[string]string)
 	priceConfig["ETH-USDT"] = "%.2f"
 	sizeConfig["ETH-USDT"] = "%.3f"
+	priceConfig["OKB-USDT"] = "%.3f"
+	sizeConfig["OKB-USDT"] = "%.3f"
 	/*
 		db, err = gorm.Open("sqlite3", "trade.db")
 		if err != nil {
@@ -891,7 +898,7 @@ func showAccount() {
 	currency := rec["ccy"].(string)
 	balance := rec["cashBal"].(string)
 	hold := rec["frozenBal"].(string)
-	available := rec["availEq"].(string)
+	available := rec[balStr].(string)
 	if currency == motherCurrency {
 		availableBalance = ToFloat(available)
 	}
@@ -905,6 +912,8 @@ func showAccount() {
 func help() {
 	fmt.Println("Usage: v5 account                    查询账户余额")
 	fmt.Println("       v5 eval symbol buydepth step size minprice maxprice   评估投入资金")
+	fmt.Println("       v5 enc key")
+	fmt.Println("       v5 dec key")
 	fmt.Println("       v5 grid grid-key              查询网格数据")
 	fmt.Println("       v5 fix grid-key               修正网格数据")
 	fmt.Println("       v5 set grid-key value-int     设置网格数据")
@@ -1019,6 +1028,24 @@ func main() {
 		size := os.Args[5]
 		oid := postOrder(symbol, direction, price, size)
 		fmt.Printf("返回: %s\n", oid)
+		return
+	case os.Args[1] == "enc": // 显示网格数据
+		if len(os.Args) != 3 {
+			help()
+		}
+		cipher := []byte("4dHqMHNpbNxTriVf")
+		mess := os.Args[2]
+		a, _ := encrypt(cipher, mess)
+		fmt.Println(a)
+		return
+	case os.Args[1] == "dec": // 显示网格数据
+		if len(os.Args) != 3 {
+			help()
+		}
+		cipher := []byte("4dHqMHNpbNxTriVf")
+		mess := os.Args[2]
+		a, _ := decrypt(cipher, mess)
+		fmt.Println(a)
 		return
 	case os.Args[1] == "grid": // 显示网格数据
 		var grid Grid
