@@ -766,17 +766,19 @@ func runDynamicGrid(symbol string, buydepth int, step string, size string) {
 				processFilledOrder(rec, symbol, stepf, size)
 			}
 			// 每循环10次，撤销超过买单深度的买单以释放资金
-			if cnt%10 == 0 {
-				min := getMinGridIdx(symbol, "buy")
-				curMin := idx - buydepth + 1
-				if min < curMin {
-					for i := min; i < curMin; i++ {
-						cancelGrid(symbol, "buy", i)
+			/*
+				if cnt%10 == 0 {
+					min := getMinGridIdx(symbol, "buy")
+					curMin := idx - buydepth + 1
+					if min < curMin {
+						for i := min; i < curMin; i++ {
+							cancelGrid(symbol, "buy", i)
+						}
+						// 设置最新的minGridIdx
+						setMinGridIdx(symbol, "buy", curMin, true)
 					}
-					// 设置最新的minGridIdx
-					setMinGridIdx(symbol, "buy", curMin, true)
 				}
-			}
+			*/
 			// 每半分钟显示账户余额， 并且报告给gridhub
 			if cnt%30 == 0 {
 				showAccount()
